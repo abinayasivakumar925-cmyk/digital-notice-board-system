@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Digital Notice Board - Admin</title>
+<style>
+body{margin:0;font-family:Arial;background:#f4f6f9}
+.hidden{display:none}
+input,textarea,select,button{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}
+button{background:#2575fc;color:#fff;border:none;cursor:pointer;border-radius:5px}
+.login-box{max-width:350px;margin:100px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,.1)}
+.sidebar{width:220px;height:100vh;position:fixed;background:#1e1e2f;color:#fff;padding-top:10px}
+.sidebar h2{text-align:center;padding:15px}
+.sidebar a{display:block;color:#fff;text-decoration:none;padding:12px}
+.sidebar a:hover{background:#333}
+.main{margin-left:230px;padding:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
+.card{padding:20px;color:#fff;border-radius:10px}
+.c1{background:linear-gradient(45deg,#6a11cb,#2575fc)}
+.c2{background:linear-gradient(45deg,#11998e,#38ef7d)}
+.c3{background:linear-gradient(45deg,#fc4a1a,#f7b733)}
+.c4{background:linear-gradient(45deg,#ee0979,#ff6a00)}
+.notice{background:#fff;padding:15px;border-left:5px solid green;margin:10px 0;border-radius:6px;position:relative;}
+.inactive{border-left-color:red;opacity:.6}
+.notice button{margin-top:5px;padding:5px;border:none;border-radius:3px;cursor:pointer;color:#fff}
+.edit-btn{background:#f0ad4e}
+.del-btn{background:red}
+small{color:#555;display:block;margin-top:5px;font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-box">
+  <h2>Admin Login</h2>
+  <input id="username" placeholder="Username">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="msg" style="color:red"></p>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin" class="hidden">
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a onclick="show('dashboard')">Dashboard</a>
+    <a onclick="show('add')">Add Notice</a>
+    <a onclick="show('manage')">Manage Notices</a>
+    <a onclick="showCalendar()">Calendar</a>
+    <a onclick="logout()">Logout</a>
+  </div>
+
+  <div class="main">
+    <!-- Dashboard -->
+    <div id="dashboard">
+      <div class="cards">
+        <div class="card c1">Categories<br><h2>3</h2></div>
+        <div class="card c2">Total Notices<br><h2 id="totalNotices">0</h2></div>
+        <div class="card c3">Active Notices<br><h2 id="activeNotices">0</h2></div>
+        <div class="card c4">Inactive Notices<br><h2 id="inactiveNotices">0</h2></div>
+      </div>
+    </div>
+
+    <!-- Add Notice -->
+    <div id="add" class="hidden">
+      <h2>Add Notice</h2>
+      <input id="title" placeholder="Notice Title">
+      <textarea id="content" placeholder="Notice Content"></textarea>
+      <select id="status">
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <button onclick="addNotice()">Publish</button>
+    </div>
+
+    <!-- Manage Notices -->
+    <div id="manage" class="hidden">
+      <h2>Manage Notices</h2>
+      <div id="adminList"></div>
+    </div>
+
+    <!-- Calendar -->
+    <div id="calendar" class="hidden">
+      <h2>Calendar</h2>
+      <p id="dateTime"></p>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT PANEL (iframe-like) -->
+<div id="studentPage" class="hidden">
+  <div class="main" style="margin-left:0">
+    <h2>Student Notice Board</h2>
+    <div id="studentList"></div>
+  </div>
+</div>
+
+<script>
+// LocalStorage notices
+let notices = JSON.parse(localStorage.getItem("notices"))||[];
+
+// --- LOGIN ---
+function login(){
+  const u=document.getElementById("username").value.trim();
+  const p=document.getElementById("password").value.trim();
+  const msg=document.getElementById("msg");
+  if(u==="admin"&&p==="admin123"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("admin").style.display="block";
+    updateDashboard();
+  }else msg.innerText="❌ Invalid credentials";
+}
+
+// --- NAVIGATION ---
+function show(id){
+  ["dashboard","add","manage","calendar"].forEach(e=>document.getElementById(e).classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+
+// --- ADD NOTICE ---
+function addNotice(){
+  const t=document.getElementById("title").value.trim();
+  const c=document.getElementById("content").value.trim();
+  const s=document.getElementById("status").value;
+  if(t&&c){
+    notices.push({title:t,content:c,status:s,time:new Date().toLocaleString()});
+    localStorage.setItem("notices",JSON.stringify(notices));
+    document.getElementById("title").value="";
+    document.getElementById("content").value="";
+    updateDashboard();
+    alert("✅ Notice added!");
+  }else alert("⚠️ Fill all fields");
+}
+
+// --- UPDATE DASHBOARD / MANAGE ---
+function updateDashboard(){
+  const adminList=document.getElementById("adminList");
+  adminList.innerHTML="";
+  let active=0,inactive=0;
+  notices.forEach((n,idx)=>{
+    n.status==="active"?active++:inactive++;
+    adminList.innerHTML+=`
+      <div class="notice ${n.status}">
+        <h3>${n.title}</h3>
+        <p>${n.content}</p>
+        <small>${n.time}</small>
+        <button class="edit-btn" onclick="editNotice(${idx})">Edit</button>
+        <button class="del-btn" onclick="deleteNotice(${idx})">Delete</button>
+      </div>`;
+  });
+  document.getElementById("totalNotices").innerText=notices.length;
+  document.getElementById("activeNotices").innerText=active;
+  document.getElementById("inactiveNotices").innerText=inactive;
+
+  showStudentNotices(); // auto update student
+}
+
+// --- DELETE NOTICE ---
+function deleteNotice(idx){
+  if(confirm("❌ Delete this notice?")){
+    notices.splice(idx,1);
+    localStorage.setItem("notices",JSON.stringify(notices));
+    updateDashboard();
+  }
+}
+
+// --- EDIT NOTICE ---
+function editNotice(idx){
+  const n = notices[idx];
+  document.getElementById("title").value=n.title;
+  document.getElementById("content").value=n.content;
+  document.getElementById("status").value=n.status;
+  show("add");
+  // Override addNotice temporarily
+  document.querySelector("#add button").onclick = function(){
+    n.title=document.getElementById("title").value.trim();
+    n.content=document.getElementById("content").value.trim();
+    n.status=document.getElementById("status").value;
+    n.time=new Date().toLocaleString();
+    localStorage.setItem("notices",JSON.stringify(notices));
+    document.getElementById("title").value="";
+    document.getElementById("content").value="";
+    updateDashboard();
+    alert("✅ Notice updated!");
+    document.querySelector("#add button").onclick=addNotice; // revert
+  };
+}
+
+// --- STUDENT NOTICES ---
+function showStudentNotices(){
+  const studentList=document.getElementById("studentList");
+  studentList.innerHTML="";
+  notices.forEach(n=>{
+    if(n.status==="active"){
+      studentList.innerHTML+=`<div class="notice">
+        <h3>${n.title}</h3>
+        <p>${n.content}</p>
+        <small>${n.time}</small>
+      </div>`;
+    }
+  });
+}
+
+// --- CALENDAR ---
+function showCalendar(){
+  show("calendar");
+  document.getElementById("dateTime").innerText=new Date().toLocaleString();
+}
+
+// --- LOGOUT ---
+function logout(){location.reload();}
+</script>
+
+</body>
+</html>

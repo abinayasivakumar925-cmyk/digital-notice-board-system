@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Digital Notice Board - Student</title>
+<style>
+body{font-family:Arial;background:#f4f6f9;margin:0}
+.hidden{display:none}
+input,button{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}
+button{background:#2575fc;color:#fff;border:none;border-radius:5px;cursor:pointer}
+.notice{background:#fff;padding:15px;border-left:5px solid green;margin:10px 0;border-radius:6px}
+small{color:#555;display:block;margin-top:5px;font-size:12px}
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+  <h2>Student Login</h2>
+  <input id="stuUser" placeholder="Username">
+  <input id="stuPass" type="password" placeholder="Password">
+  <button onclick="stuLogin()">Login</button>
+  <p id="stuMsg" style="color:red"></p>
+</div>
+
+<div id="studentPage" class="hidden">
+  <h2>Active Notices</h2>
+  <div id="studentNotices"></div>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+function stuLogin(){
+  const u=document.getElementById("stuUser").value.trim();
+  const p=document.getElementById("stuPass").value.trim();
+  const msg=document.getElementById("stuMsg");
+  if(u==="student"&&p==="student123"){
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("studentPage").classList.remove("hidden");
+    loadNotices();
+  }else msg.innerText="❌ Invalid credentials";
+}
+
+function loadNotices(){
+  const list=document.getElementById("studentNotices");
+  list.innerHTML="";
+  let notices=JSON.parse(localStorage.getItem("notices"))||[];
+  notices.forEach(n=>{
+    if(n.status==="active"){
+      list.innerHTML+=`<div class="notice">
+        <h3>${n.title}</h3><p>${n.content}</p><small>${n.time}</small></div>`;
+    }
+  });
+}
+
+// Real-time notification (poll every 2s)
+setInterval(()=>{
+  if(!document.getElementById("studentPage").classList.contains("hidden")){
+    loadNotices();
+  }
+},2000);
+
+function logout(){location.reload();}
+</script>
+
+</body>
+</html>
